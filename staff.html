@@ -1,1 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NnCart Staff Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+<body class="bg-gray-100 font-sans">
 
+    <header class="bg-[#003399] text-white p-5 shadow-lg flex justify-between items-center">
+        <div>
+            <h1 class="text-xl font-bold">NnCart Staff</h1>
+            <p class="text-[10px] opacity-80">Order Processing Unit</p>
+        </div>
+        <i class="fa-solid fa-user-gear text-2xl text-yellow-400"></i>
+    </header>
+
+    <div class="p-4 space-y-4">
+        <div class="bg-white p-4 rounded-2xl shadow-sm border-l-4 border-blue-600">
+            <label class="text-[10px] font-bold text-gray-400 uppercase">Worker ID / Name</label>
+            <input type="text" id="workerId" placeholder="Enter your ID (e.g. LAB01)" 
+                   class="w-full text-lg font-bold outline-none border-b-2 border-gray-100 focus:border-blue-600 transition-all">
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl shadow-sm">
+            <h2 class="text-sm font-bold mb-3 text-gray-700"><i class="fa-solid fa-barcode mr-2"></i>Scan Parcel Barcode</h2>
+            
+            <div id="reader" class="overflow-hidden rounded-xl bg-gray-50 border-2 border-dashed border-gray-200"></div>
+            
+            <button onclick="startScanning()" id="startBtn" class="w-full mt-4 bg-green-600 text-white p-4 rounded-xl font-bold shadow-lg active:scale-95 transition-all">
+                START SCANNER
+            </button>
+        </div>
+
+        <div id="statusBox" class="hidden bg-blue-50 p-4 rounded-2xl border border-blue-200">
+            <p id="statusMsg" class="text-blue-700 text-center font-bold text-sm">Processing...</p>
+        </div>
+    </div>
+
+    <script>
+        let html5QrCode;
+
+        function startScanning() {
+            const worker = document.getElementById('workerId').value;
+            if(!worker) {
+                alert("Pehle apni Worker ID daalo!");
+                return;
+            }
+
+            document.getElementById('startBtn').classList.add('hidden');
+            html5QrCode = new Html5Qrcode("reader");
+
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                { fps: 10, qrbox: { width: 250, height: 150 } },
+                (decodedText) => {
+                    // Success! Code scan ho gaya
+                    handleScanSuccess(decodedText, worker);
+                    html5QrCode.stop();
+                    document.getElementById('startBtn').classList.remove('hidden');
+                },
+                (errorMessage) => { /* Scanning... */ }
+            ).catch(err => alert("Camera error: " + err));
+        }
+
+        function handleScanSuccess(orderId, worker) {
+            const statusBox = document.getElementById('statusBox');
+            const statusMsg = document.getElementById('statusMsg');
+            
+            statusBox.classList.remove('hidden');
+            statusMsg.innerText = `Updating: Order #${orderId} by ${worker}`;
+
+            // Yahan tera Google Apps Script ka URL aayega
+            const scriptURL = 'TERA_GOOGLE_SCRIPT_URL_YAHAN_DAALO';
+            
+            fetch(scriptURL, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify({
+                    orderId: orderId,
+                    worker: worker,
+                    action: 'pack_order',
+                    time: new Date().toLocaleString()
+                })
+            })
+            .then(() => {
+                statusMsg.innerText = "✅ Order Packed Successfully!";
+                statusBox.classList.replace('bg-blue-50', 'bg-green-50');
+                statusMsg.classList.replace('text-blue-700', 'text-green-700');
+                setTimeout(() => statusBox.classList.add('hidden'), 3000);
+            })
+            .catch(err => {
+                alert("Error: " + err);
+                statusBox.classList.add('hidden');
+            });
+        }
+    </script>
+
+    <style>
+        #reader__dashboard_section_csr button {
+            background-color: #003399 !important;
+            color: white !important;
+            padding: 8px 15px !important;
+            border-radius: 8px !important;
+            font-size: 12px !important;
+        }
+        #reader video { border-radius: 12px; }
+    </style>
+</body>
+</html>
