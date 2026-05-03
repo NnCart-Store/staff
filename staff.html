@@ -21,13 +21,12 @@
     <div class="p-4 space-y-4">
         <div class="bg-white p-4 rounded-2xl shadow-sm border-l-4 border-blue-600">
             <label class="text-[10px] font-bold text-gray-400 uppercase">Worker ID / Name</label>
-            <input type="text" id="workerId" placeholder="Enter your ID (e.g. LAB01)" 
+            <input type="text" id="workerId" placeholder="Apna Naam Likhen" 
                    class="w-full text-lg font-bold outline-none border-b-2 border-gray-100 focus:border-blue-600 transition-all">
         </div>
 
         <div class="bg-white p-4 rounded-2xl shadow-sm">
             <h2 class="text-sm font-bold mb-3 text-gray-700"><i class="fa-solid fa-barcode mr-2"></i>Scan Parcel Barcode</h2>
-            
             <div id="reader" class="overflow-hidden rounded-xl bg-gray-50 border-2 border-dashed border-gray-200"></div>
             
             <button onclick="startScanning()" id="startBtn" class="w-full mt-4 bg-green-600 text-white p-4 rounded-xl font-bold shadow-lg active:scale-95 transition-all">
@@ -35,66 +34,81 @@
             </button>
         </div>
 
-        <div id="statusBox" class="hidden bg-blue-50 p-4 rounded-2xl border border-blue-200">
-            <p id="statusMsg" class="text-blue-700 text-center font-bold text-sm">Processing...</p>
+        <div id="statusBox" class="hidden p-4 rounded-2xl border transition-all duration-300">
+            <p id="statusMsg" class="text-center font-bold text-sm"></p>
         </div>
     </div>
 
     <script>
         let html5QrCode;
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbxsZI2CZma2Op53gSJwki7gC9Zs5qZtnpp1_4N3TeerW1s3KO3F7CWGxmO5WXLZs2Dj/exec';
+
+        // 1. Yaad rakho ki pichli baar kisne login kiya tha
+        window.onload = () => {
+            const savedName = localStorage.getItem('lastWorker');
+            if (savedName) document.getElementById('workerId').value = savedName;
+        };
 
         function startScanning() {
             const worker = document.getElementById('workerId').value;
             if(!worker) {
-                alert("Pehle apni Worker ID daalo!");
+                alert("Bhai, pehle apna naam (Worker ID) likho!");
                 return;
             }
+            // Naam save kar lo taaki baar baar na likhna pade
+            localStorage.setItem('lastWorker', worker);
 
             document.getElementById('startBtn').classList.add('hidden');
             html5QrCode = new Html5Qrcode("reader");
 
             html5QrCode.start(
                 { facingMode: "environment" }, 
-                { fps: 10, qrbox: { width: 250, height: 150 } },
+                { fps: 15, qrbox: { width: 250, height: 150 } },
                 (decodedText) => {
-                    // Success! Code scan ho gaya
                     handleScanSuccess(decodedText, worker);
                     html5QrCode.stop();
+                    document.getElementById('reader').innerHTML = ""; // Clear reader
                     document.getElementById('startBtn').classList.remove('hidden');
                 },
                 (errorMessage) => { /* Scanning... */ }
-            ).catch(err => alert("Camera error: " + err));
+            ).catch(err => {
+                alert("Camera error: " + err);
+                document.getElementById('startBtn').classList.remove('hidden');
+            });
         }
 
         function handleScanSuccess(orderId, worker) {
             const statusBox = document.getElementById('statusBox');
             const statusMsg = document.getElementById('statusMsg');
             
-            statusBox.classList.remove('hidden');
-            statusMsg.innerText = `Updating: Order #${orderId} by ${worker}`;
+            statusBox.classList.remove('hidden', 'bg-green-50', 'bg-red-50');
+            statusBox.classList.add('bg-blue-50', 'border-blue-200');
+            statusMsg.innerText = `Updating: Order #${orderId}...`;
+            statusMsg.className = "text-center font-bold text-sm text-blue-700";
 
-            // Yahan tera Google Apps Script ka URL aayega
-            const scriptURL = 'https://script.google.com/macros/s/AKfycbxsZI2CZma2Op53gSJwki7gC9Zs5qZtnpp1_4N3TeerW1s3KO3F7CWGxmO5WXLZs2Dj/exec';
+            // Data ko URL parameters mein bhej rahe hain (More reliable for Google Scripts)
+            const finalURL = `${scriptURL}?action=packOrder&orderId=${encodeURIComponent(orderId)}&worker=${encodeURIComponent(worker)}`;
             
-            fetch(scriptURL, {
+            fetch(finalURL, {
                 method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify({
-                    orderId: orderId,
-                    worker: worker,
-                    action: 'pack_order',
-                    time: new Date().toLocaleString()
-                })
+                mode: 'no-cors'
             })
             .then(() => {
-                statusMsg.innerText = "✅ Order Packed Successfully!";
+                // Success UI
                 statusBox.classList.replace('bg-blue-50', 'bg-green-50');
-                statusMsg.classList.replace('text-blue-700', 'text-green-700');
-                setTimeout(() => statusBox.classList.add('hidden'), 3000);
+                statusBox.classList.replace('border-blue-200', 'border-green-200');
+                statusMsg.innerText = `✅ Order #${orderId} Packed by ${worker}`;
+                statusMsg.className = "text-center font-bold text-sm text-green-700";
+                
+                // 3 second baad automatic agle scan ke liye ready
+                setTimeout(() => {
+                    statusBox.classList.add('hidden');
+                }, 4000);
             })
             .catch(err => {
-                alert("Error: " + err);
-                statusBox.classList.add('hidden');
+                statusBox.classList.replace('bg-blue-50', 'bg-red-50');
+                statusMsg.innerText = "❌ Error: Connection Fail!";
+                statusMsg.className = "text-center font-bold text-sm text-red-700";
             });
         }
     </script>
@@ -107,7 +121,7 @@
             border-radius: 8px !important;
             font-size: 12px !important;
         }
-        #reader video { border-radius: 12px; }
+        #reader video { border-radius: 12px; object-fit: cover; }
     </style>
 </body>
 </html>
