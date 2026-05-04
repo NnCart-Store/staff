@@ -3,53 +3,58 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NnCart Staff Pro Ultimate</title>
+<title>NnCart Ultimate Staff System</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
 
+<style>
+body{margin:0;font-family:sans-serif;background:#f3f4f6}
+#reader video{width:100%!important;border-radius:12px;object-fit:cover}
+</style>
 </head>
-<body class="bg-gray-100 font-sans">
 
-<header class="bg-[#003399] text-white p-5 shadow-lg flex justify-between">
-    <div>
-        <h1 class="text-xl font-bold">NnCart Staff Ultimate</h1>
-        <p class="text-xs opacity-80">Full Automation System</p>
-    </div>
-    <div id="netStatus" class="text-xs">🌐 Online</div>
+<body>
+
+<header style="background:#003399;color:white;padding:15px;display:flex;justify-content:space-between">
+<div>
+<h2>NnCart Staff System</h2>
+<small>Full Warehouse Mode</small>
+</div>
+<div id="net">🌐 Online</div>
 </header>
 
-<div class="p-4 space-y-4">
+<div style="padding:10px">
 
-    <!-- Worker -->
-    <div class="bg-white p-4 rounded-xl shadow">
-        <label class="text-xs text-gray-400">Worker Name</label>
-        <input id="workerId" placeholder="Apna Naam Likho"
-        class="w-full text-lg font-bold border-b outline-none">
-    </div>
+<!-- Worker -->
+<div style="background:white;padding:10px;border-radius:10px;margin-bottom:10px">
+<input id="worker" placeholder="Apna Naam Likho"
+style="width:100%;font-size:18px;border:none;border-bottom:2px solid #ccc;outline:none">
+</div>
 
-    <!-- Stats -->
-    <div class="grid grid-cols-2 gap-3">
-        <div class="bg-green-100 p-4 rounded-xl text-center">
-            <p class="text-xs">Today Packed</p>
-            <h2 id="countBox" class="text-2xl font-bold">0</h2>
-        </div>
-        <div class="bg-blue-100 p-4 rounded-xl text-center">
-            <p class="text-xs">Last Order</p>
-            <h2 id="lastBox" class="text-sm font-bold">---</h2>
-        </div>
-    </div>
+<!-- Stats -->
+<div style="display:flex;gap:10px;margin-bottom:10px">
+<div style="flex:1;background:#d1fae5;padding:10px;border-radius:10px;text-align:center">
+<p>Today Packed</p>
+<h2 id="count">0</h2>
+</div>
 
-    <!-- Scanner -->
-    <div id="reader" class="bg-white rounded-xl p-2" style="min-height:250px;"></div>
+<div style="flex:1;background:#dbeafe;padding:10px;border-radius:10px;text-align:center">
+<p>Last Scan</p>
+<h2 id="last">---</h2>
+</div>
+</div>
 
-    <!-- Status -->
-    <div id="statusBox" class="text-center font-bold text-sm"></div>
+<!-- Scanner -->
+<div id="reader" style="background:white;border-radius:10px;min-height:250px"></div>
+
+<!-- Status -->
+<div id="status" style="text-align:center;font-weight:bold;margin-top:10px"></div>
 
 </div>
 
 <script>
-let scanner;
+let scanner=null;
 let scanning=false;
 let lastScan="";
 let count=0;
@@ -58,141 +63,189 @@ const scriptURL="https://script.google.com/macros/s/AKfycbxsZI2CZma2Op53gSJwki7g
 
 // LOAD
 window.onload=()=>{
-    const w=localStorage.getItem("worker");
-    const c=localStorage.getItem("count");
+let w=localStorage.getItem("worker");
+let c=localStorage.getItem("count");
 
-    if(w) document.getElementById("workerId").value=w;
-    if(c){
-        count=parseInt(c);
-        document.getElementById("countBox").innerText=count;
-    }
+if(w) document.getElementById("worker").value=w;
+if(c){count=parseInt(c);document.getElementById("count").innerText=count;}
 
-    checkNet();
-    setInterval(checkNet,3000);
+checkNet();
+setInterval(checkNet,3000);
 
-    autoStart();
+autoStart();
 };
 
 // NETWORK
 function checkNet(){
-    const el=document.getElementById("netStatus");
-    if(navigator.onLine){
-        el.innerText="🌐 Online";
-        el.className="text-green-300 text-xs";
-    }else{
-        el.innerText="❌ Offline";
-        el.className="text-red-300 text-xs";
-    }
+let el=document.getElementById("net");
+if(navigator.onLine){
+el.innerText="🌐 Online";
+}else{
+el.innerText="❌ Offline";
+}
 }
 
-// INPUT
-document.getElementById("workerId").addEventListener("input",()=>{
-    const val=document.getElementById("workerId").value.trim();
-    if(val){
-        localStorage.setItem("worker",val);
-        autoStart();
-    }
+// SAVE NAME
+document.getElementById("worker").addEventListener("input",()=>{
+let val=document.getElementById("worker").value.trim();
+if(val){
+localStorage.setItem("worker",val);
+autoStart();
+}
 });
 
 // STATUS
 function show(msg,color){
-    const el=document.getElementById("statusBox");
-    el.innerText=msg;
-    el.className=`text-${color}-600 font-bold`;
+let el=document.getElementById("status");
+el.innerText=msg;
+el.style.color=color;
 }
 
 // START SCANNER
 async function autoStart(){
-    if(scanning) return;
 
-    const worker=document.getElementById("workerId").value.trim();
-    if(!worker) return;
+if(scanning) return;
 
-    try{
-        scanner=new Html5Qrcode("reader");
-        scanning=true;
+let worker=document.getElementById("worker").value.trim();
+if(!worker) return;
 
-        await scanner.start(
-            {facingMode:"environment"},
-            {fps:12,qrbox:{width:250,height:150}},
-            async(text)=>{
+try{
 
-                if(text===lastScan) return;
-                lastScan=text;
+scanner=new Html5Qrcode("reader");
+scanning=true;
 
-                scanning=false;
+await scanner.start(
+{facingMode:"environment"},
+{fps:12,qrbox:{width:250,height:150}},
+async(text)=>{
 
-                await scanner.stop();
-                await scanner.clear();
+if(text===lastScan) return;
+lastScan=text;
 
-                process(text,worker);
-            }
-        );
+scanning=false;
 
-    }catch(e){
-        show("Camera Error","red");
-        scanning=false;
-    }
+await safeStop();
+
+process(text,worker);
+}
+);
+
+}catch(e){
+show("Camera Error","red");
+scanning=false;
+}
 }
 
-// PROCESS
+// SAFE STOP CAMERA
+async function safeStop(){
+try{
+if(scanner){
+await scanner.stop();
+await scanner.clear();
+scanner=null;
+}
+}catch(e){}
+}
+
+// PROCESS ORDER
 async function process(id,worker){
 
-    if(!navigator.onLine){
-        show("No Internet","red");
-        restart();
-        return;
-    }
+document.getElementById("last").innerText=id;
 
-    document.getElementById("lastBox").innerText=id;
-
-    show("Processing...","blue");
-
-    try{
-        const res=await fetch(`${scriptURL}?action=packOrder&orderId=${encodeURIComponent(id)}&worker=${encodeURIComponent(worker)}`,{method:"POST"});
-
-        if(!res.ok) throw new Error();
-
-        count++;
-        localStorage.setItem("count",count);
-        document.getElementById("countBox").innerText=count;
-
-        show("Packed ✔","green");
-
-        successFX();
-
-    }catch{
-        show("Failed ❌","red");
-    }
-
-    setTimeout(restart,1500);
+if(!navigator.onLine){
+show("No Internet","red");
+restart();
+return;
 }
 
-// RESTART
-function restart(){
-    setTimeout(autoStart,500);
+show("Processing...","blue");
+
+try{
+
+// 1. fetch order data
+let res1=await fetch(`${scriptURL}?action=getOrder&orderId=${encodeURIComponent(id)}`);
+let data=await res1.json();
+
+// fallback dummy
+if(!data || !data.name){
+data={
+name:"Customer",
+address:"Unknown Address",
+phone:"0000000000"
+};
+}
+
+// 2. print label (browser mode)
+createLabel(id,data,worker);
+
+// 3. update order
+await fetch(`${scriptURL}?action=packOrder&orderId=${encodeURIComponent(id)}&worker=${encodeURIComponent(worker)}`,{method:"POST"});
+
+// 4. counter
+count++;
+localStorage.setItem("count",count);
+document.getElementById("count").innerText=count;
+
+show("Packed ✔","green");
+
+successFX();
+
+}catch(e){
+show("Error ❌","red");
+}
+
+setTimeout(restart,2000);
+}
+
+// CREATE LABEL
+function createLabel(id,data,worker){
+
+let html=`
+<html>
+<body style="font-family:sans-serif">
+<h3>NnCart Shipping Label</h3>
+<hr>
+<p><b>Order:</b> ${id}</p>
+<p><b>Name:</b> ${data.name}</p>
+<p><b>Address:</b> ${data.address}</p>
+<p><b>Phone:</b> ${data.phone}</p>
+<hr>
+<p>Packed By: ${worker}</p>
+</body>
+</html>
+`;
+
+let w=window.open("");
+w.document.write(html);
+w.document.close();
+
+setTimeout(()=>{
+w.print();
+},500);
 }
 
 // SUCCESS EFFECT
 function successFX(){
-    if(navigator.vibrate) navigator.vibrate([100,50,100]);
 
-    const ctx=new (window.AudioContext||window.webkitAudioContext)();
-    const o=ctx.createOscillator();
-    o.frequency.value=700;
-    o.connect(ctx.destination);
-    o.start();
-    setTimeout(()=>o.stop(),120);
+if(navigator.vibrate){
+navigator.vibrate([100,50,100]);
+}
+
+try{
+let ctx=new (window.AudioContext||window.webkitAudioContext)();
+let osc=ctx.createOscillator();
+osc.frequency.value=700;
+osc.connect(ctx.destination);
+osc.start();
+setTimeout(()=>osc.stop(),120);
+}catch(e){}
+}
+
+// RESTART SCANNER
+function restart(){
+setTimeout(autoStart,500);
 }
 </script>
-
-<style>
-#reader video{
-    width:100%!important;
-    border-radius:12px;
-    object-fit:cover;
-}
-</style>
 
 </body>
 </html>
