@@ -1,135 +1,198 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NnCart Staff Panel</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <script src="https://unpkg.com/html5-qrcode"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NnCart Staff Pro Ultimate</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
+
 </head>
 <body class="bg-gray-100 font-sans">
 
-    <header class="bg-[#003399] text-white p-5 shadow-lg flex justify-between items-center">
-        <div>
-            <h1 class="text-xl font-bold">NnCart Staff</h1>
-            <p class="text-[10px] opacity-80">Order Processing Unit</p>
-        </div>
-        <i class="fa-solid fa-user-gear text-2xl text-yellow-400"></i>
-    </header>
+<header class="bg-[#003399] text-white p-5 shadow-lg flex justify-between">
+    <div>
+        <h1 class="text-xl font-bold">NnCart Staff Ultimate</h1>
+        <p class="text-xs opacity-80">Full Automation System</p>
+    </div>
+    <div id="netStatus" class="text-xs">🌐 Online</div>
+</header>
 
-    <div class="p-4 space-y-4">
-        <div class="bg-white p-4 rounded-2xl shadow-sm border-l-4 border-blue-600">
-            <label class="text-[10px] font-bold text-gray-400 uppercase">Worker ID / Name</label>
-            <input type="text" id="workerId" placeholder="Apna Naam Likhen" 
-                   class="w-full text-lg font-bold outline-none border-b-2 border-gray-100 focus:border-blue-600 transition-all">
-        </div>
+<div class="p-4 space-y-4">
 
-        <div class="bg-white p-4 rounded-2xl shadow-sm">
-            <h2 class="text-sm font-bold mb-3 text-gray-700"><i class="fa-solid fa-barcode mr-2"></i>Scan Parcel Barcode</h2>
-            <div id="reader" class="overflow-hidden rounded-xl bg-gray-50 border-2 border-dashed border-gray-200" style="min-height: 250px;"></div>
-            
-            <button onclick="startScanning()" id="startBtn" class="w-full mt-4 bg-green-600 text-white p-4 rounded-xl font-bold shadow-lg active:scale-95 transition-all">
-                START SCANNER
-            </button>
-        </div>
+    <!-- Worker -->
+    <div class="bg-white p-4 rounded-xl shadow">
+        <label class="text-xs text-gray-400">Worker Name</label>
+        <input id="workerId" placeholder="Apna Naam Likho"
+        class="w-full text-lg font-bold border-b outline-none">
+    </div>
 
-        <div id="statusBox" class="hidden p-4 rounded-2xl border transition-all duration-300">
-            <p id="statusMsg" class="text-center font-bold text-sm"></p>
+    <!-- Stats -->
+    <div class="grid grid-cols-2 gap-3">
+        <div class="bg-green-100 p-4 rounded-xl text-center">
+            <p class="text-xs">Today Packed</p>
+            <h2 id="countBox" class="text-2xl font-bold">0</h2>
+        </div>
+        <div class="bg-blue-100 p-4 rounded-xl text-center">
+            <p class="text-xs">Last Order</p>
+            <h2 id="lastBox" class="text-sm font-bold">---</h2>
         </div>
     </div>
 
-    <script>
-        let html5QrCode;
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbxsZI2CZma2Op53gSJwki7gC9Zs5qZtnpp1_4N3TeerW1s3KO3F7CWGxmO5WXLZs2Dj/exec';
+    <!-- Scanner -->
+    <div id="reader" class="bg-white rounded-xl p-2" style="min-height:250px;"></div>
 
-        // Yaad rakho pichla naam
-        window.onload = () => {
-            const savedName = localStorage.getItem('lastWorker');
-            if (savedName) document.getElementById('workerId').value = savedName;
-        };
+    <!-- Status -->
+    <div id="statusBox" class="text-center font-bold text-sm"></div>
 
-        async function startScanning() {
-            const worker = document.getElementById('workerId').value;
-            if(!worker) {
-                alert("Bhai, pehle apna naam (Worker ID) likho!");
-                return;
+</div>
+
+<script>
+let scanner;
+let scanning=false;
+let lastScan="";
+let count=0;
+
+const scriptURL="https://script.google.com/macros/s/AKfycbxsZI2CZma2Op53gSJwki7gC9Zs5qZtnpp1_4N3TeerW1s3KO3F7CWGxmO5WXLZs2Dj/exec";
+
+// LOAD
+window.onload=()=>{
+    const w=localStorage.getItem("worker");
+    const c=localStorage.getItem("count");
+
+    if(w) document.getElementById("workerId").value=w;
+    if(c){
+        count=parseInt(c);
+        document.getElementById("countBox").innerText=count;
+    }
+
+    checkNet();
+    setInterval(checkNet,3000);
+
+    autoStart();
+};
+
+// NETWORK
+function checkNet(){
+    const el=document.getElementById("netStatus");
+    if(navigator.onLine){
+        el.innerText="🌐 Online";
+        el.className="text-green-300 text-xs";
+    }else{
+        el.innerText="❌ Offline";
+        el.className="text-red-300 text-xs";
+    }
+}
+
+// INPUT
+document.getElementById("workerId").addEventListener("input",()=>{
+    const val=document.getElementById("workerId").value.trim();
+    if(val){
+        localStorage.setItem("worker",val);
+        autoStart();
+    }
+});
+
+// STATUS
+function show(msg,color){
+    const el=document.getElementById("statusBox");
+    el.innerText=msg;
+    el.className=`text-${color}-600 font-bold`;
+}
+
+// START SCANNER
+async function autoStart(){
+    if(scanning) return;
+
+    const worker=document.getElementById("workerId").value.trim();
+    if(!worker) return;
+
+    try{
+        scanner=new Html5Qrcode("reader");
+        scanning=true;
+
+        await scanner.start(
+            {facingMode:"environment"},
+            {fps:12,qrbox:{width:250,height:150}},
+            async(text)=>{
+
+                if(text===lastScan) return;
+                lastScan=text;
+
+                scanning=false;
+
+                await scanner.stop();
+                await scanner.clear();
+
+                process(text,worker);
             }
-            localStorage.setItem('lastWorker', worker);
+        );
 
-            document.getElementById('startBtn').classList.add('hidden');
-            
-            // Purane instance ko saaf karo
-            if (html5QrCode) {
-                await html5QrCode.clear();
-            }
+    }catch(e){
+        show("Camera Error","red");
+        scanning=false;
+    }
+}
 
-            html5QrCode = new Html5Qrcode("reader");
+// PROCESS
+async function process(id,worker){
 
-            const config = { 
-                fps: 10, // 15 se 10 kiya taaki phone hang na ho
-                qrbox: { width: 250, height: 150 },
-                aspectRatio: 1.0 
-            };
+    if(!navigator.onLine){
+        show("No Internet","red");
+        restart();
+        return;
+    }
 
-            html5QrCode.start(
-                { facingMode: "environment" }, 
-                config,
-                async (decodedText) => {
-                    // Behtar flow: Pehle stop karo phir data bhejo
-                    await html5QrCode.stop();
-                    document.getElementById('reader').innerHTML = ""; 
-                    document.getElementById('startBtn').classList.remove('hidden');
-                    
-                    handleScanSuccess(decodedText, worker);
-                }
-            ).catch(err => {
-                alert("Camera Error: " + err);
-                document.getElementById('startBtn').classList.remove('hidden');
-            });
-        }
+    document.getElementById("lastBox").innerText=id;
 
-        function handleScanSuccess(orderId, worker) {
-            const statusBox = document.getElementById('statusBox');
-            const statusMsg = document.getElementById('statusMsg');
-            
-            statusBox.classList.remove('hidden', 'bg-green-50', 'bg-red-50');
-            statusBox.classList.add('bg-blue-50', 'border-blue-200');
-            statusMsg.innerText = `Updating: Order #${orderId}...`;
-            statusMsg.className = "text-center font-bold text-sm text-blue-700";
+    show("Processing...","blue");
 
-            // Reliable URL method
-            const finalURL = `${scriptURL}?action=packOrder&orderId=${encodeURIComponent(orderId)}&worker=${encodeURIComponent(worker)}`;
-            
-            fetch(finalURL, {
-                method: 'POST',
-                mode: 'no-cors'
-            })
-            .then(() => {
-                statusBox.classList.replace('bg-blue-50', 'bg-green-50');
-                statusBox.classList.replace('border-blue-200', 'border-green-200');
-                statusMsg.innerText = `✅ Order #${orderId} Packed by ${worker}`;
-                statusMsg.className = "text-center font-bold text-sm text-green-700";
-                
-                setTimeout(() => { statusBox.classList.add('hidden'); }, 4000);
-            })
-            .catch(err => {
-                statusBox.classList.replace('bg-blue-50', 'bg-red-50');
-                statusMsg.innerText = "❌ Connection Fail! Check Internet.";
-                statusMsg.className = "text-center font-bold text-sm text-red-700";
-            });
-        }
-    </script>
+    try{
+        const res=await fetch(`${scriptURL}?action=packOrder&orderId=${encodeURIComponent(id)}&worker=${encodeURIComponent(worker)}`,{method:"POST"});
 
-    <style>
-        #reader__dashboard_section_csr button {
-            background-color: #003399 !important;
-            color: white !important;
-            padding: 8px 15px !important;
-            border-radius: 8px !important;
-            font-size: 12px !important;
-        }
-        #reader video { border-radius: 12px; object-fit: cover; width: 100% !important; }
-    </style>
+        if(!res.ok) throw new Error();
+
+        count++;
+        localStorage.setItem("count",count);
+        document.getElementById("countBox").innerText=count;
+
+        show("Packed ✔","green");
+
+        successFX();
+
+    }catch{
+        show("Failed ❌","red");
+    }
+
+    setTimeout(restart,1500);
+}
+
+// RESTART
+function restart(){
+    setTimeout(autoStart,500);
+}
+
+// SUCCESS EFFECT
+function successFX(){
+    if(navigator.vibrate) navigator.vibrate([100,50,100]);
+
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const o=ctx.createOscillator();
+    o.frequency.value=700;
+    o.connect(ctx.destination);
+    o.start();
+    setTimeout(()=>o.stop(),120);
+}
+</script>
+
+<style>
+#reader video{
+    width:100%!important;
+    border-radius:12px;
+    object-fit:cover;
+}
+</style>
+
 </body>
 </html>
